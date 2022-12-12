@@ -1,0 +1,247 @@
+---
+title: "Athlete Dashboard"
+author: "Zak Kindl"
+date: "2022-11-29"
+output:
+  flexdashboard::flex_dashboard:
+    orientation: rows
+params:
+runtime: shiny
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(flexdashboard)
+library(shinydashboard)
+library(shiny) 
+library(dplyr)
+library(lubridate)
+library(maditr)
+library(ggplot2)
+```
+
+```{r global,include=FALSE}
+#import data
+sportdata <- read.csv("~/Desktop/SPRT 6190/Assignment Data/DataDP3 (2).csv")
+
+#omit gaps
+sportdata <- na.omit(sportdata)
+
+#format date
+sportdata$date <- mdy(sportdata$date)
+
+#create avgs of all assessments to accommodate for repeat assessments
+AssesmentAvg <- sportdata%>% 
+  group_by(athletes,assessment,metric,date,position)%>%
+  summarise(avg=median(value))
+
+#seperate and convert data from long to wide
+anthro <- AssesmentAvg[AssesmentAvg$assessment == "Anthropometry",]
+speed <- AssesmentAvg[AssesmentAvg$assessment == "Max Running Speed",]
+ift <- AssesmentAvg[AssesmentAvg$assessment == "30-15 IFT",]
+ham_strength <- AssesmentAvg[AssesmentAvg$assessment == "Nordic Hamstring Strength",]
+max_strength <- AssesmentAvg[AssesmentAvg$assessment == "Max Strength (TrapBar Deadlift)",]
+cmj <- AssesmentAvg[AssesmentAvg$assessment == "CMJ (Force Plates)",]
+
+wide_speed <- dcast(speed, athletes + date + position  ~ metric, value.var="avg")
+wide_speed <- na.omit(wide_speed)
+
+wide_anthro <- dcast(anthro, athletes + date + position ~ metric, value.var="avg")
+wide_anthro <- na.omit(wide_anthro)
+
+wide_cmj <- dcast(cmj, athletes + date + position ~ metric, value.var="avg")
+wide_cmj <- na.omit(wide_cmj)
+
+wide_ift <- dcast(ift, athletes + date + position ~ metric, value.var="avg")
+wide_ift <- na.omit(wide_ift)
+
+wide_ham_strength <- dcast(ham_strength, athletes + date+ position  ~ metric, value.var="avg")
+wide_ham_strength <- na.omit(wide_ham_strength)
+
+wide_max_strength <- dcast(max_strength, athletes + date + position  ~ metric, value.var="avg")
+wide_max_strength <- na.omit(wide_max_strength)
+
+#combine avgs with existing dataset 
+combineddata<-left_join(sportdata, AssesmentAvg, by = c("athletes" = "athletes","assessment"="assessment", "date" = "date", "metric" = "metric","position"="position"))
+
+#drop avg value that was added
+combineddata <- combineddata[,-7]
+
+#make values distinct so that values aren't just repeating
+finaldata <-distinct(combineddata)
+
+##Normalization function
+minMax <- function(x) {
+  ((x - min(x)) / (max(x) - min(x)))*100
+}
+
+##Apply normalization to wide data sets
+speed_norm <- as.data.frame(lapply(wide_speed[,c(4:6)], minMax))
+speed_norm$athletes <- wide_speed$athletes
+speed_norm$date <- wide_speed$date
+speed_norm$position <- wide_speed$position
+
+cmj_norm <- as.data.frame(lapply(wide_cmj[,c(4:9)], minMax))
+cmj_norm$athletes <- wide_cmj$athletes
+cmj_norm$date <- wide_cmj$date
+cmj_norm$position <- wide_cmj$position
+
+ift_norm <- as.data.frame(lapply(wide_ift[,c(4:5)], minMax))
+ift_norm$athletes <- wide_ift$athletes
+ift_norm$date <- wide_ift$date
+ift_norm$position <- wide_ift$position
+
+ham_strength_norm <- as.data.frame(lapply(wide_ham_strength[,c(4:6)], minMax))
+ham_strength_norm$athletes <- wide_ham_strength$athletes
+ham_strength_norm$date <- wide_ham_strength$date
+ham_strength_norm$position <- wide_ham_strength$position
+
+max_strength_norm <- as.data.frame(lapply(wide_max_strength[,c(4:5)], minMax))
+max_strength_norm$athletes <- wide_max_strength$athletes
+max_strength_norm$date <- wide_max_strength$date
+max_strength_norm$position <- wide_max_strength$position
+
+mostrecentspeed <- speed_norm %>%
+  group_by(athletes) %>%
+  slice(which.max(as.Date(date, '%Y/%m/%d'))) %>%
+  dplyr::rename("0-10 yd" = X0.10y) %>%
+  dplyr::rename("10-30 yd" = X10.30y) %>%
+  dplyr::rename("0-30 yd" = X0.30y)
+
+mostrecentcmj <- cmj_norm %>%
+  group_by(athletes) %>%
+  slice(which.max(as.Date(date, '%Y/%m/%d'))) %>%
+  dplyr::rename("Concentric Impulse" = Concentric.Impulse) %>%
+  dplyr::rename("Concentric Impulse (100ms)" = Concentric.Impulse.100ms) %>%
+  dplyr::rename("Relative Concentric Mean Power" = Concentric.Mean.Power...BM) %>%
+  dplyr::rename("Relative Eccentric Mean Power" = Eccentric.Mean.Power...BM) %>%
+  dplyr::rename("RSI Modified" = RSI.modified) %>%
+  dplyr::rename("Vertical Velocity at Takeoff" = Vertical.Velocity.at.Takeoff)
+
+mostrecentift <- ift_norm %>%
+  group_by(athletes) %>%
+  slice(which.max(as.Date(date, '%Y/%m/%d'))) %>%
+  dplyr::rename("Final Speed" = Final.Speed)
+
+mostrecenthamstrength <- ham_strength_norm %>%
+  group_by(athletes) %>%
+  slice(which.max(as.Date(date, '%Y/%m/%d'))) %>%
+  dplyr::rename("Lateral Assymetry" = Lateral.Assymetry..) %>%
+  dplyr::rename("Left Hamstring Strength" = Left.Hamstring.Strength) %>%
+  dplyr::rename("Right Hamstring Strength" = Right.Hamstring.Strength)
+
+mostrecentmaxstrength <- max_strength_norm %>%
+  group_by(athletes) %>%
+  slice(which.max(as.Date(date, '%Y/%m/%d'))) %>%
+  dplyr::rename("Estimated 1RM" = Estimated.1RM) %>%
+  dplyr::rename("Relative Strength" = Relative.Strength)
+
+speed_long <- melt(mostrecentspeed, id.vars = c("athletes", "date","position"))
+cmj_long <- melt(mostrecentcmj, id.vars = c("athletes", "date","position"))
+ift_long <- melt(mostrecentift, id.vars = c("athletes", "date","position"))
+ham_strength_long <- melt(mostrecenthamstrength, id.vars = c("athletes", "date","position"))
+max_strength_long <- melt(mostrecentmaxstrength, id.vars = c("athletes", "date","position"))
+
+rcnt_final <- rbind(speed_long, cmj_long, ift_long, ham_strength_long, max_strength_long)
+
+rcnt_final <- within(rcnt_final, {   
+  Grade <- NA
+  Grade[value < 25] <- "Poor"
+  Grade[value >= 25 & value < 50] <- "Average"
+  Grade[value >= 50 & value < 75] <- "Good"
+  Grade[value >= 75] <- "Excellent"
+})
+
+```
+
+Row{.tabset}
+-------------------------------------
+### Recent Results 
+    
+```{r, echo=FALSE}
+
+data <- rcnt_final
+
+data1 = reactive({
+  data%>%
+    filter(athletes == input$athletes)
+  
+})
+
+data2 = reactive({
+  data1()%>%
+    filter(data1()$variable == input$metricoptions)
+})
+
+
+selectInput("athletes",
+            "Athletes:",
+            choices = unique(rcnt_final$athletes),selected = "athlete 1")
+
+selectInput("metricoptions",
+             "Metrics:",
+             choices = unique(rcnt_final$variable))
+
+box(title = "Most Recent Result:",
+  renderTable(data2()$value,colnames = FALSE)
+
+)
+
+```
+
+### Positions
+```{r, echo=FALSE}
+
+data4 = reactive({
+  data%>%
+    filter(position == input$positions)
+  
+})
+
+data5 = reactive({
+  data4()%>%
+    filter(data4()$variable == input$metricoptions2)
+})
+
+
+selectInput("positions",
+            "Positions",
+            choices = unique(rcnt_final$position),selected = "Striker")
+
+selectInput("metricoptions2",
+             "Metrics:",
+             choices = unique(rcnt_final$variable))
+
+renderDataTable(data5(),
+                options = list(
+        scrollX = TRUE,
+        scrollY = "250px"))
+               
+
+
+```
+
+
+### Reports
+```{r, echo=FALSE}
+dt <- reactive({
+  finaldata%>%
+    filter(finaldata$athletes == input$player & finaldata$metric == input$variable)
+})
+
+
+selectInput("player","Player:",choices = unique(finaldata$athletes)
+            )
+
+selectInput("variable","Variable:",choices = unique(finaldata$metric)
+            )
+```
+
+### Reports Plot
+```{r, echo=FALSE}
+
+renderPlot(ggplot(dt(),aes(date,avg,label = avg))+geom_point()+geom_line()+geom_text(hjust=1,vjust=2)+geom_smooth())
+
+```

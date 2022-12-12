@@ -1,0 +1,59 @@
+---
+title: "SPRT Assignment #3"
+author: "Zak Kindl"
+date: "2022-12-11"
+output: html_document
+---
+
+### Definitions
+
+##### 30-15 IFT: Final Speed (km/h): 
+###### The speed of the final stage completed before being removed from the test.
+
+##### V02 Max: 
+###### An estimation of the VO2max value for the athlete based on the final speed of the test, age, body weight and gender. Value will most likely be higher than actual predicited value given that these are trained athletes.
+
+##### 0-10Y Split:
+###### Time to complete the first 10Y in seconds
+
+##### 10-30Y Split: 
+###### Time to complete the last 20Y in seconds
+
+##### 0-30Y Split: 
+###### Time to complete the total distance from 0 to 30Y in seconds
+
+
+##### Body Fat %: 
+###### Overall body % percentage taken using skinfold methods from seven sites
+
+##### Weight(lb): 
+###### Body weight in pounds
+
+##### Height(in): 
+###### Player's height in inches
+
+##### Concentric Impulse: 
+###### Force generated during triple extension of a counter movement jump, essentially force right as athlete is "taking off"
+
+##### Concentric Impulse - 100ms: The first 100 mili seconds of the concentric impulse
+
+##### Concentric Mean Power / Body Weight: 
+###### The average force across the concentric power divided by an athletes body weight. 
+
+##### Eccentric Mean Power / Body Weight: 
+###### The average of the athletes force applied as they drop into a squat prior to triple extension divded by their body weight. 
+
+##### RSI - Modified: 
+###### A measure of reactive jump capacity and displays how an athlete copes with and performs plyometric activities.
+
+##### Vertical Velocity @ Take off: 
+###### Force applied in the y-axis upon athlete's takeoff from the force plate. 
+
+### Overall Metrics:
+
+###### While the overall metrics collected are certainley meaningful, a lot of this meaning is derived from the "question." What are we trying to achieve by analyzing this data? If the goal is to determine athletes ability to improve with plyometric training then metrics such as predicted VO2 are of little relevance and not worth including. So while removing or adding metrics could certainley prove beneficial it would not make sense to begin removing metrics unless we know the question and context in which the data is being collected. 
+
+
+### Predicting 30Y Sprint Times:
+
+###### Predicting 30Y sprint times is certainley possible however in the context of this dataset it is not entirely logical. Given we already have multiple trials that contain athletes 30Y sprint times all together, predicting the times would be sulf fufilling. If we where to predict the times regardless I would first investigate current literature to determine what other metrics have been found to correlate with 30Y times, such as CMJ metrics etc. 
